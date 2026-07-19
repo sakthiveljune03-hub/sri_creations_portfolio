@@ -1,0 +1,6 @@
+{
+  "name": "Sriman Cinematic Video Editor Portfolio",
+  "description": "Premium, glassmorphism-driven cinematic video editor portfolio featuring a 3D curved layout, custom cursor, and mouse-reactive projection lighting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
