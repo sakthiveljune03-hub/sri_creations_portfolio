@@ -28,14 +28,27 @@ export default function Hero3DLayout() {
     e.preventDefault();
     const targetElement = document.getElementById("contact");
     if (targetElement) {
-      let actualTop = 0;
-      let curr: HTMLElement | null = targetElement;
-      while (curr) {
-        actualTop += curr.offsetTop;
-        curr = curr.offsetParent as HTMLElement | null;
+      let actualTop = targetElement.getBoundingClientRect().top + window.scrollY;
+      
+      // Correct for any active translateY transforms in parent elements (e.g. ScrollReveal)
+      let parent = targetElement.parentElement;
+      while (parent) {
+        const style = window.getComputedStyle(parent);
+        const transform = style.transform || style.webkitTransform;
+        if (transform && transform !== "none") {
+          const matrix = transform.match(/^matrix\((.+)\)$/);
+          if (matrix) {
+            const values = matrix[1].split(", ");
+            const ty = parseFloat(values[5]);
+            if (!isNaN(ty)) {
+              actualTop -= ty;
+            }
+          }
+        }
+        parent = parent.parentElement;
       }
-      const compensationOffset = window.innerWidth >= 768 ? 90 : 80;
-      const offsetPosition = actualTop - compensationOffset;
+
+      const offsetPosition = actualTop;
 
       window.scrollTo({
         top: offsetPosition,

@@ -18,10 +18,31 @@ export default function Header({ cinemaMode, setCinemaMode }: HeaderProps) {
   const [activeSection, setActiveSection] = useState("home");
   const [hoveredTabId, setHoveredTabId] = useState<string | null>(null);
 
+  const [isVisible, setIsVisible] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
   const navRef = useRef<HTMLElement>(null);
+  const logoRef = useRef<HTMLAnchorElement>(null);
 
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<number | null>(null);
+  const mousePosRef = useRef({ clientY: 0, target: null as EventTarget | null });
+  const isVisibleRef = useRef(true);
+
+  // Sync state to ref to avoid stale closure issues in event handlers
+  useEffect(() => {
+    isVisibleRef.current = isVisible;
+  }, [isVisible]);
+
+  // Handle mobile detection and resize
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize, { passive: true });
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     setIsMounted(true);
@@ -87,6 +108,83 @@ export default function Header({ cinemaMode, setCinemaMode }: HeaderProps) {
     };
   }, []);
 
+  // Monitor mouse movements and scroll for Smart Auto-Hide logic
+  useEffect(() => {
+    let timeoutId: number | null = null;
+
+    const checkVisibility = (e?: MouseEvent) => {
+      const scrollY = window.scrollY;
+      const inHero = scrollY < window.innerHeight;
+
+      if (inHero) {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        setIsVisible(true);
+        return;
+      }
+
+      if (isMobile) {
+        setIsVisible(true);
+        return;
+      }
+
+      const clientY = e ? e.clientY : mousePosRef.current.clientY;
+      const target = e ? e.target : mousePosRef.current.target;
+
+      const isOverHeader = navRef.current?.contains(target as Node) || false;
+      const isOverLogo = logoRef.current?.contains(target as Node) || false;
+      const inDetectionZone = clientY >= 0 && clientY <= 80;
+
+      if (inDetectionZone || isOverHeader || isOverLogo) {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        setIsVisible(true);
+      } else {
+        if (e) {
+          // Triggered by mousemove: wait 300ms
+          if (!timeoutId && isVisibleRef.current) {
+            timeoutId = window.setTimeout(() => {
+              setIsVisible(false);
+              timeoutId = null;
+            }, 300);
+          }
+        } else {
+          // Triggered by scroll: hide immediately
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+          setIsVisible(false);
+        }
+      }
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      mousePosRef.current = { clientY: e.clientY, target: e.target };
+      checkVisibility(e);
+    };
+
+    const handleScroll = () => {
+      checkVisibility();
+    };
+
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    // Initial check
+    checkVisibility();
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("scroll", handleScroll);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [isMobile]);
+
   const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
     const targetId = href.replace("#", "");
@@ -99,15 +197,27 @@ export default function Header({ cinemaMode, setCinemaMode }: HeaderProps) {
       isScrollingRef.current = true;
       setActiveSection(targetId);
 
-      let actualTop = 0;
-      let curr: HTMLElement | null = targetElement;
-      while (curr) {
-        actualTop += curr.offsetTop;
-        curr = curr.offsetParent as HTMLElement | null;
+      let actualTop = targetElement.getBoundingClientRect().top + window.scrollY;
+      
+      // Correct for any active translateY transforms in parent elements (e.g. ScrollReveal)
+      let parent = targetElement.parentElement;
+      while (parent) {
+        const style = window.getComputedStyle(parent);
+        const transform = style.transform || style.webkitTransform;
+        if (transform && transform !== "none") {
+          const matrix = transform.match(/^matrix\((.+)\)$/);
+          if (matrix) {
+            const values = matrix[1].split(", ");
+            const ty = parseFloat(values[5]);
+            if (!isNaN(ty)) {
+              actualTop -= ty;
+            }
+          }
+        }
+        parent = parent.parentElement;
       }
 
-      const compensationOffset = window.innerWidth >= 768 ? 90 : 80;
-      const offsetPosition = actualTop - compensationOffset;
+      const offsetPosition = actualTop;
 
       window.scrollTo({
         top: offsetPosition,
@@ -136,12 +246,18 @@ export default function Header({ cinemaMode, setCinemaMode }: HeaderProps) {
     <>
       {/* ─── FIXED LOGO IN TOP LEFT CORNER ─── */}
       <a
+        ref={logoRef}
         href="#home"
         onClick={(e) => handleScrollTo(e, "#home")}
         className="fixed z-50 pointer-events-auto flex items-center gap-[16px] group select-none transition-all duration-300
           top-4 left-[2px]
           md:top-[22px] md:left-[14px]
           lg:top-[28px] lg:left-[22px]"
+        style={{
+          transform: isMobile ? "none" : (isVisible ? "translateY(0)" : "translateY(-150px)"),
+          transition: isMobile ? "" : `transform 0.35s ${isVisible ? "ease-out" : "ease-in-out"}`,
+          willChange: "transform",
+        }}
       >
         <img
           src="/logo-images/brand_logo.png"
@@ -167,6 +283,9 @@ export default function Header({ cinemaMode, setCinemaMode }: HeaderProps) {
           boxShadow: "0 20px 40px rgba(0, 0, 0, 0.06)",
           maskImage: "linear-gradient(to bottom, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.67) 30%, rgba(255, 255, 255, 0.33) 60%, rgba(255, 255, 255, 0) 100%)",
           WebkitMaskImage: "linear-gradient(to bottom, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.67) 30%, rgba(255, 255, 255, 0.33) 60%, rgba(255, 255, 255, 0) 100%)",
+          transform: isMobile ? "none" : (isVisible ? "translateY(0)" : "translateY(-100%)"),
+          transition: isMobile ? "" : `transform 0.35s ${isVisible ? "ease-out" : "ease-in-out"}`,
+          willChange: "transform",
         }}
       >
         {/* Soft premium red and gold ambient studio glow diffusion */}
@@ -178,6 +297,11 @@ export default function Header({ cinemaMode, setCinemaMode }: HeaderProps) {
         className={`fixed top-0 left-0 right-0 z-40 flex justify-center px-6 pointer-events-none ${
           cinemaMode ? "opacity-20 hover:opacity-100" : ""
         } ${isScrolled ? "py-3" : "py-4"}`}
+        style={{
+          transform: isMobile ? "none" : (isVisible ? "translateY(0)" : "translateY(-100%)"),
+          transition: isMobile ? "" : `transform 0.35s ${isVisible ? "ease-out" : "ease-in-out"}`,
+          willChange: "transform",
+        }}
       >
         <nav
           ref={navRef}
