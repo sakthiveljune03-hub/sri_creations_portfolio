@@ -187,20 +187,18 @@ export default function Hero3DLayout() {
         .book-now-floating-btn {
           position: fixed;
           z-index: 50;
-          bottom: 24px;
-          left: 20px;
-          right: auto;
-          top: auto;
+          top: 20px;
+          right: 20px;
           background: linear-gradient(135deg, #FF2D55 0%, #FF3B30 50%, #FF6A3D 100%);
           border: none;
-          border-radius: 16px;
-          padding: 14px 28px;
-          box-shadow: 0 10px 30px rgba(255, 45, 85, 0.25);
+          border-radius: 20px;
+          padding: 13px 32px;
+          box-shadow: none;
           
           font-family: "Randu Madu", sans-serif;
           font-weight: 700;
-          font-size: 11px;
-          letter-spacing: 0.15em;
+          font-size: 10px;
+          letter-spacing: 0.2em;
           text-transform: uppercase;
           color: #FFFFFF;
           cursor: pointer;
@@ -211,15 +209,8 @@ export default function Hero3DLayout() {
         
         @media (min-width: 768px) {
           .book-now-floating-btn {
-            bottom: auto;
-            left: auto;
             top: 24px;
             right: 24px;
-            border-radius: 20px;
-            padding: 16px 40px;
-            font-size: 12px;
-            letter-spacing: 0.2em;
-            box-shadow: none;
           }
         }
         
