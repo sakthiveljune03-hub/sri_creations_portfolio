@@ -14,11 +14,9 @@ const router = express.Router();
 // Public route
 router.get('/', getTestimonials);
 
-// Admin-only routes
+// Public route for creating reviews
 router.post(
   '/',
-  verifyJWT,
-  verifyAdmin,
   [
     body('clientName').notEmpty().withMessage('Client name is required').trim(),
     body('review').notEmpty().withMessage('Review text is required').trim(),

@@ -14,10 +14,25 @@ export const getTestimonials = async (req, res, next) => {
   }
 };
 
-// POST /api/testimonials (protected)
+// POST /api/testimonials (public/admin)
 export const createTestimonial = async (req, res, next) => {
   try {
-    const { clientName, company, designation, review, profileImage, rating } = req.body;
+    const { 
+      clientName, 
+      company, 
+      designation, 
+      review, 
+      profileImage, 
+      rating,
+      email,
+      service,
+      projectName,
+      completionDate,
+      instagram,
+      confirmGenuine,
+      confirmPublish,
+      status
+    } = req.body;
 
     if (!clientName || !review) {
       throw new ApiError(400, 'Client name and review are required');
@@ -29,7 +44,15 @@ export const createTestimonial = async (req, res, next) => {
       designation,
       review,
       profileImage,
-      rating: rating ? Number(rating) : 5
+      rating: rating ? Number(rating) : 5,
+      email,
+      service,
+      projectName,
+      completionDate,
+      instagram,
+      confirmGenuine,
+      confirmPublish,
+      status: status || 'approved' // Automatically approve for instant frontend render
     });
 
     const savedTestimonial = await testimonial.save();
@@ -45,7 +68,22 @@ export const createTestimonial = async (req, res, next) => {
 // PUT /api/testimonials/:id (protected)
 export const updateTestimonial = async (req, res, next) => {
   try {
-    const { clientName, company, designation, review, profileImage, rating } = req.body;
+    const { 
+      clientName, 
+      company, 
+      designation, 
+      review, 
+      profileImage, 
+      rating,
+      email,
+      service,
+      projectName,
+      completionDate,
+      instagram,
+      confirmGenuine,
+      confirmPublish,
+      status
+    } = req.body;
 
     const testimonial = await Testimonial.findById(req.params.id);
     if (!testimonial) {
@@ -58,6 +96,14 @@ export const updateTestimonial = async (req, res, next) => {
     if (review !== undefined) testimonial.review = review;
     if (profileImage !== undefined) testimonial.profileImage = profileImage;
     if (rating !== undefined) testimonial.rating = Number(rating);
+    if (email !== undefined) testimonial.email = email;
+    if (service !== undefined) testimonial.service = service;
+    if (projectName !== undefined) testimonial.projectName = projectName;
+    if (completionDate !== undefined) testimonial.completionDate = completionDate;
+    if (instagram !== undefined) testimonial.instagram = instagram;
+    if (confirmGenuine !== undefined) testimonial.confirmGenuine = confirmGenuine;
+    if (confirmPublish !== undefined) testimonial.confirmPublish = confirmPublish;
+    if (status !== undefined) testimonial.status = status;
 
     const updatedTestimonial = await testimonial.save();
 
