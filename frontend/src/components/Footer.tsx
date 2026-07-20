@@ -50,9 +50,11 @@ export default function Footer() {
         {/* Copyright */}
         <div className="text-center relative -translate-y-[15px]">
           <a
-            href="https://www.instagram.com/avenix_core?igsh=eTIyd2N2ZWU5ejdr"
+            href="https://www.instagram.com/mr_sriman_official_?igsh=MTNvb2s1Mm80ZWRiZQ=="
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="Instagram"
+            title="Open Instagram Profile"
             className="inline-flex items-center gap-2 mb-[10px] cursor-pointer group transition-all duration-300 ease"
           >
             <Instagram
@@ -61,7 +63,7 @@ export default function Footer() {
               style={{ stroke: "url(#instagram-grad)" }}
             />
             <span className="font-mono text-[15px] font-medium text-[rgba(255,255,255,0.82)] tracking-[0.5px] transition-all duration-300 ease group-hover:text-[#E1306C] group-hover:drop-shadow-[0_0_8px_rgba(225,48,108,0.5)]">
-              avenix_core
+              mr_sriman_official_
             </span>
           </a>
           <span className="font-mono text-[8px] text-zinc-400 opacity-90 block leading-[1.2]">

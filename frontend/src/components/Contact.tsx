@@ -10,7 +10,9 @@ export default function Contact() {
     {
       id: "whatsapp",
       title: "WhatsApp",
-      link: "https://wa.me/6385945448?text=Hi%20Sri%20Creation!%20%F0%9F%91%8B%0A%0AI%20visited%20your%20portfolio%20website%20and%20I'm%20interested%20in%20your%20video%20editing%20services.%0A%0AI%20would%20like%20to%20discuss%20my%20project.%20Please%20get%20back%20to%20me.%20Thank%20you!",
+      link: "https://wa.me/916385945448?text=Hi%20Sri%20Creation%2C%0A%0AI%20visited%20your%20portfolio%20website%20and%20I'm%20interested%20in%20your%20cinematic%20video%20editing%20services.%20I'd%20like%20to%20discuss%20my%20project.",
+      ariaLabel: "WhatsApp",
+      methodTitle: "Open WhatsApp Chat",
       icon: (
         <svg className="w-[30px] h-[30px] text-[#25D366] transition-all duration-[250ms] ease-out group-hover:scale-110 group-hover:drop-shadow-[0_0_6px_rgba(37,211,102,0.45)] group-hover:brightness-110 hover:animate-pulse" viewBox="0 0 24 24" fill="currentColor">
           <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.504-5.714-1.463L0 24zm6.59-4.846c1.6.95 3.197 1.451 4.792 1.453 5.485.002 9.95-4.462 9.954-9.953.002-2.661-1.033-5.161-2.909-7.04C16.51 1.775 14.015.772 11.351.772c-5.49 0-9.956 4.462-9.96 9.953-.001 1.905.503 3.766 1.463 5.385L1.879 20.91l4.768-1.756zM17.472 14.382c-.32-.16-1.89-.879-2.18-.985-.29-.108-.5-.16-.71.16-.21.32-.8.985-.98 1.19-.18.204-.36.228-.68.068-1.55-.783-2.61-1.39-3.662-3.21-.28-.48.28-.445.8-.1.144-.092.274-.216.39-.36.08-.162.12-.326.06-.48-.06-.16-.71-1.7-.97-2.33-.25-.6-.52-.52-.71-.53-.18-.01-.39-.01-.6-.01-.21 0-.55.08-.84.4-.29.32-1.1 1.08-1.1 2.63 0 1.55 1.13 3.05 1.28 3.26.16.21 2.22 3.39 5.38 4.75 1.9.82 2.73.93 3.72.78.6-.09 1.89-.77 2.15-1.52.26-.75.26-1.4.18-1.52-.08-.12-.29-.19-.61-.35z"/>
@@ -22,7 +24,9 @@ export default function Contact() {
     {
       id: "instagram",
       title: "Instagram",
-      link: "https://www.instagram.com/avenix_core?igsh=eTIyd2N2ZWU5ejdr",
+      link: "https://www.instagram.com/mr_sriman_official_?igsh=MTNvb2s1Mm80ZWRiZQ==",
+      ariaLabel: "Instagram",
+      methodTitle: "Open Instagram Profile",
       icon: (
         <svg className="w-[30px] h-[30px] transition-all duration-[250ms] ease-out group-hover:scale-110 group-hover:drop-shadow-[0_0_6px_rgba(255,79,163,0.45)] group-hover:brightness-110" viewBox="0 0 24 24" fill="none" stroke="url(#instagram-grad)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
@@ -36,7 +40,9 @@ export default function Contact() {
     {
       id: "phone",
       title: "Phone Number",
-      link: "tel:+919626359550",
+      link: "tel:+916385945448",
+      ariaLabel: "Call",
+      methodTitle: "Call Phone Number",
       icon: (
         <svg className="w-[30px] h-[30px] transition-all duration-[250ms] ease-out group-hover:scale-110 group-hover:drop-shadow-[0_0_6px_rgba(255,60,60,0.45)] group-hover:brightness-110 hover:animate-pulse" viewBox="0 0 24 24" fill="none" stroke="url(#phone-grad)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
@@ -96,12 +102,14 @@ export default function Contact() {
 
             {/* Vertical list of contact methods (Left Aligned on desktop, Centered on mobile) */}
             <div className="flex flex-col items-center lg:items-start justify-center gap-[28px] py-6 max-w-sm mx-auto lg:mx-0">
-              {contactMethods.map((method) => (
+              {contactMethods.map((method: any) => (
                 <a
                   key={method.id}
                   href={method.link}
                   target={method.id !== "phone" ? "_blank" : undefined}
                   rel={method.id !== "phone" ? "noopener noreferrer" : undefined}
+                  aria-label={method.ariaLabel}
+                  title={method.methodTitle}
                   className="group flex items-center gap-3.5 select-none transition-all duration-[250ms] ease-out cursor-pointer"
                 >
                   {/* Icon (28px - 32px) */}
@@ -180,9 +188,11 @@ export default function Contact() {
               <Github className="w-4 h-4" />
             </a>
             <a 
-              href="https://www.instagram.com/avenix_core?igsh=eTIyd2N2ZWU5ejdr" 
+              href="https://www.instagram.com/mr_sriman_official_?igsh=MTNvb2s1Mm80ZWRiZQ==" 
               target="_blank" 
               rel="noopener noreferrer" 
+              aria-label="Instagram"
+              title="Open Instagram Profile"
               className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-zinc-300 hover:text-white hover:border-[#FF2D55]/50 hover:bg-white/10 flex items-center justify-center transition-all"
             >
               <Instagram className="w-4 h-4" />
