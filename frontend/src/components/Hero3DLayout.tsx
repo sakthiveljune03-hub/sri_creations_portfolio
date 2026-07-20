@@ -187,8 +187,10 @@ export default function Hero3DLayout() {
         .book-now-floating-btn {
           position: fixed;
           z-index: 50;
-          top: 20px;
-          right: 20px;
+          top: 96px; /* Positioned below mobile navigation bar with a gap */
+          left: 50%;
+          right: auto;
+          transform: translateX(-50%) scale(1);
           background: linear-gradient(135deg, #FF2D55 0%, #FF3B30 50%, #FF6A3D 100%);
           border: none;
           border-radius: 20px;
@@ -207,10 +209,28 @@ export default function Hero3DLayout() {
           will-change: transform, opacity, translate, box-shadow;
         }
         
+        .book-now-floating-btn:hover {
+          transform: translateX(-50%) scale(1.05);
+          filter: brightness(1.1);
+          box-shadow: none;
+        }
+        
+        .book-now-floating-btn:active {
+          transform: translateX(-50%) scale(0.97);
+        }
+        
         @media (min-width: 768px) {
           .book-now-floating-btn {
             top: 24px;
             right: 24px;
+            left: auto;
+            transform: scale(1);
+          }
+          .book-now-floating-btn:hover {
+            transform: scale(1.05);
+          }
+          .book-now-floating-btn:active {
+            transform: scale(0.97);
           }
         }
         
@@ -218,17 +238,9 @@ export default function Hero3DLayout() {
           .book-now-floating-btn {
             top: 32px;
             right: 40px;
+            left: auto;
+            transform: scale(1);
           }
-        }
-        
-        .book-now-floating-btn:hover {
-          transform: scale(1.05);
-          filter: brightness(1.1);
-          box-shadow: none;
-        }
-        
-        .book-now-floating-btn:active {
-          transform: scale(0.97);
         }
         
         .book-now-btn-show {
