@@ -25,7 +25,7 @@ export interface CustomerReview {
 
 import { TESTIMONIALS } from "../data";
 
-const API_URL = import.meta.env.VITE_API_URL || "https://sri-creations-portfolio-1.onrender.com";
+const API_URL = (import.meta as any).env.VITE_API_URL || "https://sri-creations-portfolio-1.onrender.com";
 
 // Map static testimonials to CustomerReview format for default display
 const staticReviews: CustomerReview[] = TESTIMONIALS.map((t, idx) => ({
