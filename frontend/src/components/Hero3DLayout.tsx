@@ -236,7 +236,7 @@ export default function Hero3DLayout() {
         
         @media (min-width: 1024px) {
           .book-now-floating-btn {
-            top: 32px;
+            top: 45px; /* Moved down by 13px on desktop */
             right: 40px;
             left: auto;
             transform: scale(1);
