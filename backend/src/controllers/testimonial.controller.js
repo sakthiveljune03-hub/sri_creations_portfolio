@@ -1,22 +1,47 @@
 import Testimonial from '../models/Testimonial.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
+import mongoose from 'mongoose';
 
 // GET /api/testimonials
 export const getTestimonials = async (req, res, next) => {
   try {
+    // Check if database is connected, if not return 500
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(500).json({
+        success: false,
+        message: 'Database connection failed or database is not ready'
+      });
+    }
+
     const testimonials = await Testimonial.find().sort({ createdAt: -1 });
-    return res.status(200).json(
-      new ApiResponse(200, testimonials, 'Testimonials retrieved successfully')
-    );
+    
+    // Return both reviews (Step 7) and data (for existing frontend compatibility)
+    return res.status(200).json({
+      success: true,
+      reviews: testimonials || [],
+      data: testimonials || []
+    });
   } catch (error) {
-    next(error);
+    console.error('Error fetching testimonials:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Internal Server Error'
+    });
   }
 };
 
 // POST /api/testimonials (public/admin)
 export const createTestimonial = async (req, res, next) => {
   try {
+    // Check database readiness
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(500).json({
+        success: false,
+        message: 'Database connection failed'
+      });
+    }
+
     const { 
       clientName, 
       company, 
@@ -35,7 +60,10 @@ export const createTestimonial = async (req, res, next) => {
     } = req.body;
 
     if (!clientName || !review) {
-      throw new ApiError(400, 'Client name and review are required');
+      return res.status(400).json({
+        success: false,
+        message: 'Client name and review are required'
+      });
     }
 
     const testimonial = new Testimonial({
@@ -57,11 +85,17 @@ export const createTestimonial = async (req, res, next) => {
 
     const savedTestimonial = await testimonial.save();
 
-    return res.status(201).json(
-      new ApiResponse(201, savedTestimonial, 'Testimonial created successfully')
-    );
+    return res.status(201).json({
+      success: true,
+      message: 'Testimonial created successfully',
+      data: savedTestimonial
+    });
   } catch (error) {
-    next(error);
+    console.error('Error creating testimonial:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Internal Server Error'
+    });
   }
 };
 

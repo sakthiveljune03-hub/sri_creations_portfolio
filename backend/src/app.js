@@ -31,12 +31,24 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // CORS setup - restricted to CLIENT_URL
-const allowedOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
+// CORS setup - support multiple allowed origins
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://10.33.65.209:3000',
+  'https://sri-creations.vercel.app',
+  'https://sri-creations-portfolio.vercel.app'
+];
+
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps, curl, postman)
     if (!origin) return callback(null, true);
-    if (origin === allowedOrigin || allowedOrigin === '*') {
+    if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+      return callback(null, true);
+    }
+    // Also check if matches custom CLIENT_URL env variable
+    if (process.env.CLIENT_URL && origin === process.env.CLIENT_URL) {
       return callback(null, true);
     }
     return callback(new Error('Not allowed by CORS'));
@@ -45,6 +57,9 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Express preflight response for OPTIONS requests
+app.options('*', cors());
 
 // Body Parsers
 app.use(express.json({ limit: '16kb' }));
