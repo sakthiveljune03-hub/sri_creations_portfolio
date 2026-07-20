@@ -192,12 +192,12 @@ export default function Hero3DLayout() {
           background: linear-gradient(135deg, #FF2D55 0%, #FF3B30 50%, #FF6A3D 100%);
           border: none;
           border-radius: 20px;
-          padding: 13px 32px;
+          padding: 8px 20px;
           box-shadow: none;
           
           font-family: "Randu Madu", sans-serif;
           font-weight: 700;
-          font-size: 10px;
+          font-size: 8px;
           letter-spacing: 0.2em;
           text-transform: uppercase;
           color: #FFFFFF;
