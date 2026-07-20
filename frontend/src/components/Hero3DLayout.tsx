@@ -16,12 +16,27 @@ export default function Hero3DLayout() {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       setScrollY(currentScrollY);
-      setShowButton(currentScrollY < window.innerHeight - 100);
+      
+      const width = window.innerWidth;
+      if (width < 768) {
+        // Mobile only: only visible at the very top (scrollY < 20)
+        setShowButton(currentScrollY < 20);
+      } else if (width >= 1024) {
+        // Desktop only: always visible
+        setShowButton(true);
+      } else {
+        // Tablet: original behavior (hides when leaving Hero section)
+        setShowButton(currentScrollY < window.innerHeight - 100);
+      }
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll, { passive: true });
     handleScroll();
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
   }, []);
 
   const handleBookNowClick = (e: React.MouseEvent<HTMLButtonElement>) => {
