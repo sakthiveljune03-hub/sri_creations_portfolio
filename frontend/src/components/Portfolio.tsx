@@ -420,32 +420,71 @@ function CinemaPanel({
   const [isHovered, setIsHovered] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(true);
   const [isAudioActive, setIsAudioActive] = useState(false);
+  const [hasPlayedOnce, setHasPlayedOnce] = useState(false);
+  const [hasEnded, setHasEnded] = useState(false);
+
+  const handleEnded = () => {
+    setIsVideoPlaying(false);
+    setHasEnded(true);
+  };
+
+  const handlePlayClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const vid = videoRef.current;
+    if (vid) {
+      if (hasEnded || vid.ended) {
+        vid.currentTime = 0;
+        setHasEnded(false);
+      } else if (!hasPlayedOnce) {
+        vid.currentTime = 0;
+      }
+      setIsAudioActive(true);
+      setIsVideoPlaying(true);
+      setHasPlayedOnce(true);
+      vid.muted = false;
+      vid.play().catch(() => {});
+    }
+  };
 
   const isSpecialCard = true;
+
+  // Force reload when video source changes
+  useEffect(() => {
+    const vid = videoRef.current;
+    if (vid) {
+      vid.load();
+    }
+  }, [project.videoUrl]);
 
   // Autoplay / pause based on active state
   useEffect(() => {
     const vid = videoRef.current;
     if (!vid) return;
     if (isActive) {
-      if (isSpecialCard) {
-        if (isVideoPlaying) {
+      if (hasPlayedOnce) {
+        if (isVideoPlaying && !hasEnded) {
           vid.muted = !isAudioActive;
           vid.play().catch(() => {});
         } else {
           vid.pause();
         }
       } else {
-        vid.muted = true;
-        vid.play().catch(() => {});
+        if (isVideoPlaying) {
+          vid.muted = !isAudioActive;
+          vid.play().catch(() => {});
+        } else {
+          vid.pause();
+        }
       }
     } else {
       vid.pause();
-      if (isSpecialCard) {
-        setIsVideoPlaying(!isAudioActive);
+      if (!hasPlayedOnce) {
+        setIsVideoPlaying(true);
+      } else {
+        setIsVideoPlaying(false);
       }
     }
-  }, [isActive, isVideoPlaying, isAudioActive, isSpecialCard]);
+  }, [isActive, isVideoPlaying, isAudioActive, hasPlayedOnce, hasEnded]);
 
   // Pause video on page scroll and resume silent autoplay on stop (if audio not enabled)
   useEffect(() => {
@@ -474,7 +513,7 @@ function CinemaPanel({
         clearTimeout(scrollTimeout);
       }
     };
-  }, [isActive, isSpecialCard, isVideoPlaying, isAudioActive]);
+  }, [isActive, isSpecialCard, isAudioActive]);
 
   const { x, y, z, rotateY, scale, opacity, blur, zIndex } = getCardStyles(diff, isMobile, isTablet);
 
@@ -590,11 +629,12 @@ function CinemaPanel({
             <video
               ref={videoRef}
               src={project.videoUrl}
-              autoPlay={isActive && !isSpecialCard}
-              loop
+              autoPlay={isActive}
+              loop={!hasPlayedOnce}
               muted={!isAudioActive}
               playsInline
               preload="metadata"
+              onEnded={handleEnded}
               style={{
                 position: "absolute", inset: 0, width: "100%", height: "100%",
                 objectFit: "cover",
@@ -694,17 +734,9 @@ function CinemaPanel({
 
           {/* Premium Play Button for special cards */}
           <AnimatePresence>
-            {isSpecialCard && isActive && (!isAudioActive || !isVideoPlaying) && (
+            {isSpecialCard && isActive && (!isAudioActive || !isVideoPlaying || hasEnded) && (
               <motion.button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const vid = videoRef.current;
-                  if (vid && !isAudioActive) {
-                    vid.currentTime = 0; // Restart on first audio activation
-                  }
-                  setIsAudioActive(true);
-                  setIsVideoPlaying(true);
-                }}
+                onClick={handlePlayClick}
                 style={{
                   position: "absolute",
                   top: "50%",

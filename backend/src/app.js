@@ -11,6 +11,7 @@ import projectRoutes from './routes/project.routes.js';
 import testimonialRoutes from './routes/testimonial.routes.js';
 import bookingRoutes from './routes/booking.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
+import reviewRoutes from './routes/review.routes.js';
 import errorHandler from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -95,7 +96,7 @@ app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/testimonials', testimonialRoutes);
-app.use('/api/reviews', testimonialRoutes);
+app.use('/api', reviewRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/upload', uploadRoutes);
 

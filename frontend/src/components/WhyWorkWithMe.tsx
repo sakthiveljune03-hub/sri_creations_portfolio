@@ -4,89 +4,117 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Star, ChevronLeft, ChevronRight, MessageSquare, ShieldCheck, Zap, HeartHandshake, Eye, Upload, Check, ChevronDown, Calendar, X, CheckCircle } from "lucide-react";
+import { Star, ChevronLeft, ChevronRight, MessageSquare, ShieldCheck, Zap, HeartHandshake, Upload, Check, ChevronDown, X, CheckCircle, Lock } from "lucide-react";
 
 export interface CustomerReview {
   id: string;
-  name: string;
+  customerName: string;
+  photoUrl?: string;
   email?: string;
+  phone?: string;
+  instagram?: string;
   service: string;
-  projectName?: string;
-  completionDate?: string;
+  project?: string;
   rating: number;
   review: string;
-  instagram?: string;
-  photoUrl?: string;
-  confirmGenuine: boolean;
-  confirmPublish: boolean;
-  status: "pending" | "published";
-  submittedAt: string;
+  status: "Pending" | "Published" | "Rejected";
+  createdAt: string;
+  updatedAt: string;
 }
 
-import { TESTIMONIALS } from "../data";
-
-const API_URL = (import.meta as any).env.VITE_API_URL || "https://sri-creations-portfolio-1.onrender.com";
-
-// Map static testimonials to CustomerReview format for default display
-const staticReviews: CustomerReview[] = TESTIMONIALS.map((t, idx) => ({
-  id: `static-${idx}`,
-  name: t.name,
-  service: t.role,
-  projectName: t.company,
-  rating: 5,
-  review: t.content,
-  photoUrl: t.avatar,
-  confirmGenuine: true,
-  confirmPublish: true,
-  status: "published",
-  submittedAt: new Date().toISOString()
-}));
+const API_URL = (import.meta as any).env.VITE_API_URL || "http://localhost:5000";
 
 export default function WhyWorkWithMe() {
   const [reviews, setReviews] = useState<CustomerReview[]>([]);
   const [isAdmin, setIsAdmin] = useState(window.location.hash === "#admin");
   const [loading, setLoading] = useState(true);
+  const [dbError, setDbError] = useState(false);
 
-  // Load reviews from API with localStorage / static fallback
+  // Admin auth states
+  const [token, setToken] = useState<string | null>(localStorage.getItem("admin_token"));
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [loggingIn, setLoggingIn] = useState(false);
+  const [adminReviews, setAdminReviews] = useState<CustomerReview[]>([]);
+
+  // Load published reviews from API
   const loadReviews = useCallback(async () => {
     setLoading(true);
+    setDbError(false);
     try {
       const res = await fetch(`${API_URL}/api/reviews`);
+      if (!res.ok) {
+        throw new Error("API error status");
+      }
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
-        const dbReviews = data.data.map((r: any) => ({
-          id: r._id,
-          name: r.clientName,
-          email: r.email,
-          service: r.service,
-          projectName: r.projectName,
-          completionDate: r.completionDate,
-          rating: r.rating,
-          review: r.review,
-          instagram: r.instagram,
-          photoUrl: r.profileImage,
-          confirmGenuine: r.confirmGenuine !== undefined ? r.confirmGenuine : true,
-          confirmPublish: r.confirmPublish !== undefined ? r.confirmPublish : true,
-          status: r.status === "approved" ? ("published" as const) : ("pending" as const),
-          submittedAt: r.createdAt || new Date().toISOString()
-        }));
-        
-        // Merge DB reviews with static ones so the carousel is never empty
-        setReviews([...dbReviews, ...staticReviews]);
+        setReviews(data.data);
       } else {
-        setReviews(staticReviews);
+        setReviews([]);
       }
     } catch (e) {
-      console.error("Failed to fetch reviews from API, using static fallback", e);
-      setReviews(staticReviews);
+      console.error("Failed to fetch reviews from API:", e);
+      setDbError(true);
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // Load all reviews for admin panel
+  const loadAdminReviews = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/api/admin/reviews`, {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        setAdminReviews(data.data);
+      }
+    } catch (err) {
+      console.error("Failed to load admin reviews:", err);
+    }
+  }, [token]);
+
+  // Initial load and real-time SSE listener
   useEffect(() => {
     loadReviews();
-  }, [loadReviews]);
+
+    const eventSource = new EventSource(`${API_URL}/api/reviews/stream`);
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const eventData = JSON.parse(event.data);
+        if (eventData.type === 'REFRESH') {
+          loadReviews();
+          if (token) {
+            loadAdminReviews();
+          }
+        }
+      } catch (err) {
+        console.error("Error parsing SSE message:", err);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.error("SSE stream error:", err);
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [loadReviews, token, loadAdminReviews]);
+
+  // Load admin reviews when admin modal opens and token is set
+  useEffect(() => {
+    if (isAdmin && token) {
+      loadAdminReviews();
+    }
+  }, [isAdmin, token, loadAdminReviews]);
 
   // Listen to hash change for Admin toggle
   useEffect(() => {
@@ -97,33 +125,28 @@ export default function WhyWorkWithMe() {
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
-  const publishedReviews = useMemo(() => {
-    return reviews.filter((r) => r.status === "published");
-  }, [reviews]);
-
   const [activeTestimonialIdx, setActiveTestimonialIdx] = useState(0);
 
-  // Keep index bounds correct if publishedReviews size changes
+  // Keep index bounds correct if reviews size changes
   useEffect(() => {
-    if (publishedReviews.length > 0 && activeTestimonialIdx >= publishedReviews.length) {
+    if (reviews.length > 0 && activeTestimonialIdx >= reviews.length) {
       setActiveTestimonialIdx(0);
     }
-  }, [publishedReviews.length, activeTestimonialIdx]);
+  }, [reviews.length, activeTestimonialIdx]);
 
-  const activeTestimonial = publishedReviews.length > 0 ? publishedReviews[activeTestimonialIdx] : null;
+  const activeTestimonial = reviews.length > 0 ? reviews[activeTestimonialIdx] : null;
 
   // States for the review form
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [service, setService] = useState("");
   const [projectName, setProjectName] = useState("");
-  const [completionDate, setCompletionDate] = useState("");
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [review, setReview] = useState("");
   const [instagram, setInstagram] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [confirmGenuine, setConfirmGenuine] = useState(false);
   const [confirmPublish, setConfirmPublish] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
@@ -176,25 +199,24 @@ export default function WhyWorkWithMe() {
       setErrorMessage("Please enter your Review.");
       return;
     }
-    if (!confirmGenuine || !confirmPublish) {
-      setErrorMessage("You must accept both checkboxes to submit your review.");
+    if (!confirmPublish) {
+      setErrorMessage("You must allow SRI CREATION to publish this review.");
       return;
     }
 
     setErrorMessage("");
+    setSubmitting(true);
+
     const reviewBody = {
-      clientName: name.trim(),
+      customerName: name.trim(),
       email: email.trim() || undefined,
+      phone: phone.trim() || undefined,
       service,
-      projectName: projectName.trim() || undefined,
-      completionDate: completionDate || undefined,
+      project: projectName.trim() || undefined,
       rating,
       review: review.trim(),
       instagram: instagram.trim() || undefined,
-      profileImage: photoPreview || undefined,
-      confirmGenuine,
-      confirmPublish,
-      status: "approved" // Instantly approve for real-time frontend display
+      photoUrl: photoPreview || undefined
     };
 
     fetch(`${API_URL}/api/reviews`, {
@@ -209,7 +231,6 @@ export default function WhyWorkWithMe() {
         setSubmitting(false);
         if (data.success) {
           setSubmitted(true);
-          loadReviews(); // Refresh the list from the database immediately
         } else {
           setErrorMessage(data.message || "Failed to submit review. Please try again.");
         }
@@ -224,15 +245,14 @@ export default function WhyWorkWithMe() {
   const resetForm = () => {
     setName("");
     setEmail("");
+    setPhone("");
     setService("");
     setProjectName("");
-    setCompletionDate("");
     setRating(0);
     setHoverRating(0);
     setReview("");
     setInstagram("");
     setPhotoPreview(null);
-    setConfirmGenuine(false);
     setConfirmPublish(false);
     setSubmitted(false);
     setErrorMessage("");
@@ -242,40 +262,94 @@ export default function WhyWorkWithMe() {
   };
 
   const handlePrev = () => {
-    setActiveTestimonialIdx((prev) => (prev === 0 ? publishedReviews.length - 1 : prev - 1));
+    setActiveTestimonialIdx((prev) => (prev === 0 ? reviews.length - 1 : prev - 1));
   };
 
   const handleNext = () => {
-    setActiveTestimonialIdx((prev) => (prev === publishedReviews.length - 1 ? 0 : prev + 1));
+    setActiveTestimonialIdx((prev) => (prev === reviews.length - 1 ? 0 : prev + 1));
   };
 
-  const handlePublish = (id: string) => {
-    const updated = reviews.map((r) => {
-      if (r.id === id) {
-        return { ...r, status: "published" as const };
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError("");
+    setLoggingIn(true);
+    try {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: adminEmail, password: adminPassword })
+      });
+      const data = await res.json();
+      if (data.success && data.data && data.data.token) {
+        localStorage.setItem("admin_token", data.data.token);
+        setToken(data.data.token);
+      } else {
+        setLoginError(data.message || "Invalid credentials");
       }
-      return r;
-    });
-    localStorage.setItem("sri_creation_reviews", JSON.stringify(updated));
-    setReviews(updated);
+    } catch (err) {
+      setLoginError("Failed to connect to the authentication server");
+    } finally {
+      setLoggingIn(false);
+    }
   };
 
-  const handleUnpublish = (id: string) => {
-    const updated = reviews.map((r) => {
-      if (r.id === id) {
-        return { ...r, status: "pending" as const };
-      }
-      return r;
-    });
-    localStorage.setItem("sri_creation_reviews", JSON.stringify(updated));
-    setReviews(updated);
+  const handleLogout = () => {
+    localStorage.removeItem("admin_token");
+    setToken(null);
+    setAdminReviews([]);
   };
 
-  const handleDelete = (id: string) => {
+  const handlePublish = async (id: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/admin/reviews/${id}/publish`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!data.success) alert(data.message || "Failed to publish");
+    } catch (err) {
+      alert("Error publishing review");
+    }
+  };
+
+  const handleUnpublish = async (id: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/admin/reviews/${id}/unpublish`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!data.success) alert(data.message || "Failed to unpublish");
+    } catch (err) {
+      alert("Error unpublishing review");
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/admin/reviews/${id}/reject`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!data.success) alert(data.message || "Failed to reject");
+    } catch (err) {
+      alert("Error rejecting review");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to permanently delete this review?")) {
-      const updated = reviews.filter((r) => r.id !== id);
-      localStorage.setItem("sri_creation_reviews", JSON.stringify(updated));
-      setReviews(updated);
+      try {
+        const res = await fetch(`${API_URL}/api/admin/reviews/${id}`, {
+          method: "DELETE",
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!data.success) alert(data.message || "Failed to delete");
+      } catch (err) {
+        alert("Error deleting review");
+      }
     }
   };
 
@@ -334,7 +408,15 @@ export default function WhyWorkWithMe() {
             </div>
           </div>
 
-          {activeTestimonial === null ? (
+          {/* Right Column: Carousel (Grid span 6) */}
+          {dbError ? (
+            <div className="lg:col-span-6 w-full max-w-[91%] mx-auto lg:max-w-[91%] lg:mr-0 lg:ml-auto white-glass p-5 md:p-7 flex flex-col justify-center items-center min-h-[315px]">
+              <MessageSquare className="w-12 h-12 text-[#FF2D55]/60 mb-4" />
+              <p className="text-white text-sm font-sans font-semibold text-center">
+                Unable to load customer reviews.
+              </p>
+            </div>
+          ) : activeTestimonial === null ? (
             /* Placeholder review card when no reviews are published */
             <div className="lg:col-span-6 w-full max-w-[91%] mx-auto lg:max-w-[91%] lg:mr-0 lg:ml-auto white-glass white-glass-hover p-5 md:p-7 flex flex-col justify-between relative min-h-[315px] transition-all duration-300">
               {/* Background Quotes Watermark */}
@@ -395,19 +477,19 @@ export default function WhyWorkWithMe() {
                     {activeTestimonial.photoUrl ? (
                       <img
                         src={activeTestimonial.photoUrl}
-                        alt={activeTestimonial.name}
+                        alt={activeTestimonial.customerName}
                         className="w-20 h-20 rounded-full object-cover"
                         referrerPolicy="no-referrer"
                       />
                     ) : (
                       <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-[#FF2D55]/20 to-[#FF6A3D]/20 border border-white/10 flex items-center justify-center text-[#FF2D55] font-display text-xl font-bold">
-                        {activeTestimonial.name.charAt(0).toUpperCase()}
+                        {activeTestimonial.customerName.charAt(0).toUpperCase()}
                       </div>
                     )}
                   </div>
                   <div>
                     <h4 className="font-nunito text-sm text-white">
-                      {activeTestimonial.name}
+                      {activeTestimonial.customerName}
                       {activeTestimonial.instagram && (
                         <span className="text-zinc-400 text-xs font-sans ml-1.5 lowercase">
                           ({activeTestimonial.instagram.startsWith("@") ? activeTestimonial.instagram : `@${activeTestimonial.instagram}`})
@@ -416,12 +498,12 @@ export default function WhyWorkWithMe() {
                     </h4>
                     <p className="text-zinc-500 text-[10px] font-mono tracking-wide uppercase mt-0.5">
                       {activeTestimonial.service}
-                      {activeTestimonial.projectName && (
-                        <> &bull; <span className="text-[#FF2D55]">{activeTestimonial.projectName}</span></>
+                      {activeTestimonial.project && (
+                        <> &bull; <span className="text-[#FF2D55]">{activeTestimonial.project}</span></>
                       )}
                       &nbsp;&bull;&nbsp;
                       <span>
-                        {new Date(activeTestimonial.submittedAt).toLocaleDateString(undefined, {
+                        {new Date(activeTestimonial.createdAt).toLocaleDateString(undefined, {
                           year: "numeric",
                           month: "short",
                           day: "numeric",
@@ -431,8 +513,8 @@ export default function WhyWorkWithMe() {
                   </div>
                 </div>
 
-                {/* Slider switch controls (only render if there's more than 1 published review) */}
-                {publishedReviews.length > 1 && (
+                {/* Slider switch controls */}
+                {reviews.length > 1 && (
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handlePrev}
@@ -451,14 +533,13 @@ export default function WhyWorkWithMe() {
                   </div>
                 )}
               </div>
-
             </div>
           )}
 
         </div>
 
         {/* ⭐ Share Your Experience Section */}
-        <div className="mt-24 pt-12 border-t border-white/5 relative z-10">
+        <div id="review-form" className="mt-24 pt-12 border-t border-white/5 relative z-10">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <div className="flex items-center gap-2 mb-3 justify-center">
               <span className="w-8 h-[1px] bg-[#D8B56A]" />
@@ -533,6 +614,34 @@ export default function WhyWorkWithMe() {
                     />
                   </div>
 
+                  {/* Phone */}
+                  <div className="flex flex-col">
+                    <label className="text-zinc-400 text-[10px] font-mono uppercase tracking-wider mb-2">
+                      Phone (Optional)
+                    </label>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="e.g. +1 (555) 000-0000"
+                      className="bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-500 text-xs md:text-sm font-sans focus:outline-none focus:border-[#FF2D55]/50 focus:ring-1 focus:ring-[#FF2D55]/50 focus:bg-white/[0.07] transition-all duration-300 w-full"
+                    />
+                  </div>
+
+                  {/* Instagram Username */}
+                  <div className="flex flex-col">
+                    <label className="text-zinc-400 text-[10px] font-mono uppercase tracking-wider mb-2">
+                      Instagram (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={instagram}
+                      onChange={(e) => setInstagram(e.target.value)}
+                      placeholder="e.g. @john_doe"
+                      className="bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-500 text-xs md:text-sm font-sans focus:outline-none focus:border-[#FF2D55]/50 focus:ring-1 focus:ring-[#FF2D55]/50 focus:bg-white/[0.07] transition-all duration-300 w-full"
+                    />
+                  </div>
+
                   {/* Service Availed */}
                   <div className="flex flex-col">
                     <label className="text-zinc-400 text-[10px] font-mono uppercase tracking-wider mb-2 flex items-center">
@@ -562,43 +671,13 @@ export default function WhyWorkWithMe() {
                   {/* Project Name */}
                   <div className="flex flex-col">
                     <label className="text-zinc-400 text-[10px] font-mono uppercase tracking-wider mb-2">
-                      Project Name
+                      Project Name (Optional)
                     </label>
                     <input
                       type="text"
                       value={projectName}
                       onChange={(e) => setProjectName(e.target.value)}
                       placeholder="e.g. Summer Commercial Reel"
-                      className="bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-500 text-xs md:text-sm font-sans focus:outline-none focus:border-[#FF2D55]/50 focus:ring-1 focus:ring-[#FF2D55]/50 focus:bg-white/[0.07] transition-all duration-300 w-full"
-                    />
-                  </div>
-
-                  {/* Project Completion Date */}
-                  <div className="flex flex-col">
-                    <label className="text-zinc-400 text-[10px] font-mono uppercase tracking-wider mb-2">
-                      Project Completion Date
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="date"
-                        value={completionDate}
-                        onChange={(e) => setCompletionDate(e.target.value)}
-                        style={{ colorScheme: "dark" }}
-                        className="bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-white text-xs md:text-sm font-sans focus:outline-none focus:border-[#FF2D55]/50 focus:ring-1 focus:ring-[#FF2D55]/50 focus:bg-white/[0.07] transition-all duration-300 w-full cursor-pointer pr-10"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Instagram Username */}
-                  <div className="flex flex-col">
-                    <label className="text-zinc-400 text-[10px] font-mono uppercase tracking-wider mb-2">
-                      Instagram (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={instagram}
-                      onChange={(e) => setInstagram(e.target.value)}
-                      placeholder="e.g. @john_doe"
                       className="bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-500 text-xs md:text-sm font-sans focus:outline-none focus:border-[#FF2D55]/50 focus:ring-1 focus:ring-[#FF2D55]/50 focus:bg-white/[0.07] transition-all duration-300 w-full"
                     />
                   </div>
@@ -670,7 +749,7 @@ export default function WhyWorkWithMe() {
                           onChange={handleFileChange}
                           className="absolute inset-0 opacity-0 cursor-pointer"
                         />
-                        <span className="text-[9px] font-mono text-zinc-500">Max 5MB</span>
+                        <span className="text-[9px] font-mono text-zinc-500">Max 1.5MB</span>
                       </div>
                     )}
                   </div>
@@ -692,23 +771,6 @@ export default function WhyWorkWithMe() {
 
                 {/* Checkboxes */}
                 <div className="flex flex-col gap-3.5 mt-2">
-                  <label className="flex items-start gap-3 cursor-pointer group text-xs text-zinc-400 select-none">
-                    <input
-                      type="checkbox"
-                      checked={confirmGenuine}
-                      onChange={(e) => setConfirmGenuine(e.target.checked)}
-                      className="sr-only"
-                    />
-                    <div className={`w-4.5 h-4.5 rounded border flex items-center justify-center shrink-0 transition-all duration-200 mt-0.5 ${
-                      confirmGenuine
-                        ? "bg-[#FF2D55] border-[#FF2D55] text-white"
-                        : "border-white/20 group-hover:border-white/40 bg-white/5"
-                    }`}>
-                      {confirmGenuine && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                    </div>
-                    <span>I confirm this is my genuine review. <span className="text-[#FF2D55]">*</span></span>
-                  </label>
-
                   <label className="flex items-start gap-3 cursor-pointer group text-xs text-zinc-400 select-none">
                     <input
                       type="checkbox"
@@ -750,12 +812,11 @@ export default function WhyWorkWithMe() {
           </div>
         </div>
 
-
-
         {/* Admin Dashboard Modal Overlay */}
         {isAdmin && (
           <div className="fixed inset-0 z-50 overflow-y-auto bg-zinc-950/95 backdrop-blur-xl flex justify-center p-4 md:p-10">
             <div className="w-full max-w-4xl h-fit white-glass rounded-[32px] p-6 md:p-10 relative mt-16 md:mt-24 shadow-[0_20px_50px_rgba(0,0,0,0.8)] border border-white/10">
+              
               {/* Header */}
               <div className="flex items-center justify-between border-b border-white/5 pb-6 mb-8">
                 <div>
@@ -763,144 +824,216 @@ export default function WhyWorkWithMe() {
                     ⚙️ Review Management Dashboard
                   </h2>
                   <p className="text-[#C9CDD4] text-xs font-sans mt-1">
-                    Approve, publish, unpublish, or delete customer review submissions in real-time.
+                    Approve, publish, unpublish, reject, or delete customer review submissions in real-time.
                   </p>
                 </div>
-                <button
-                  onClick={() => {
-                    window.location.hash = "";
-                    setIsAdmin(false);
-                  }}
-                  className="p-2.5 rounded-full border border-white/10 bg-white/5 text-zinc-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-                  aria-label="Close Admin Portal"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-3">
+                  {token && (
+                    <button
+                      onClick={handleLogout}
+                      className="py-1.5 px-3 rounded-lg font-mono text-[9px] uppercase tracking-wider font-bold text-zinc-400 border border-white/10 hover:text-white transition-colors cursor-pointer"
+                    >
+                      Logout
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      window.location.hash = "";
+                      setIsAdmin(false);
+                    }}
+                    className="p-2.5 rounded-full border border-white/10 bg-white/5 text-zinc-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                    aria-label="Close Admin Portal"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
-              {/* Reviews List */}
-              <div className="flex flex-col gap-6 text-left">
-                {reviews.length === 0 ? (
-                  <div className="text-center py-16 border border-dashed border-white/10 rounded-2xl bg-white/[0.02]">
-                    <p className="text-zinc-500 text-sm font-sans">No reviews submitted yet.</p>
+              {/* Security check: If not logged in, show login form */}
+              {!token ? (
+                <div className="max-w-md mx-auto py-8">
+                  <div className="text-center mb-8">
+                    <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-3 border border-white/10">
+                      <Lock className="w-5 h-5 text-zinc-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white">Admin Authentication Required</h3>
+                    <p className="text-xs text-zinc-400 mt-1">Please log in to manage testimonials.</p>
                   </div>
-                ) : (
-                  reviews.map((rev) => {
-                    const formattedDate = new Date(rev.submittedAt).toLocaleDateString(undefined, {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit"
-                    });
-
-                    return (
-                      <div
-                        key={rev.id}
-                        className="white-glass p-5 rounded-2xl border border-white/5 flex flex-col md:flex-row gap-5 justify-between items-start md:items-center hover:border-white/10 transition-all"
-                      >
-                        {/* Identity & Content */}
-                        <div className="flex gap-4 items-start flex-1">
-                          {/* Photo */}
-                          <div className="shrink-0">
-                            {rev.photoUrl ? (
-                              <img
-                                src={rev.photoUrl}
-                                alt={rev.name}
-                                className="w-14 h-14 rounded-full object-cover border border-white/10"
-                              />
-                            ) : (
-                              <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#FF2D55]/20 to-[#FF6A3D]/20 border border-white/10 flex items-center justify-center text-[#FF2D55] font-display text-base font-bold">
-                                {rev.name.charAt(0).toUpperCase()}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Text details */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                              <h4 className="font-nunito text-sm text-white font-bold truncate">
-                                {rev.name}
-                              </h4>
-                              {rev.instagram && (
-                                <span className="text-zinc-500 text-xs font-sans">
-                                  ({rev.instagram.startsWith("@") ? rev.instagram : `@${rev.instagram}`})
-                                </span>
-                              )}
-                              <span className="text-zinc-600 text-[10px] font-mono">
-                                • {formattedDate}
-                              </span>
-                            </div>
-
-                            {/* Service & Project */}
-                            <div className="text-zinc-400 text-xs font-sans mb-2 flex items-center gap-1.5 flex-wrap">
-                              <span className="text-[#FF2D55] font-semibold">{rev.service}</span>
-                              {rev.projectName && (
-                                <span className="text-zinc-500">• Project: {rev.projectName}</span>
-                              )}
-                              {rev.completionDate && (
-                                <span className="text-zinc-600">• Completed: {rev.completionDate}</span>
-                              )}
-                            </div>
-
-                            {/* Star Rating */}
-                            <div className="flex gap-0.5 mb-2.5">
-                              {[...Array(rev.rating)].map((_, i) => (
-                                <Star key={i} className="w-3.5 h-3.5 fill-[#D8B56A] text-[#D8B56A]" />
-                              ))}
-                              {[...Array(5 - rev.rating)].map((_, i) => (
-                                <Star key={i} className="w-3.5 h-3.5 text-white/10 fill-transparent" />
-                              ))}
-                            </div>
-
-                            {/* Review text */}
-                            <p className="text-zinc-300 text-xs md:text-sm leading-relaxed font-sans italic bg-white/[0.02] p-3 rounded-xl border border-white/5">
-                              &ldquo;{rev.review}&rdquo;
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Status & Actions Column */}
-                        <div className="flex md:flex-col items-end gap-3 shrink-0 w-full md:w-auto border-t md:border-t-0 border-white/5 pt-4 md:pt-0 mt-3 md:mt-0 justify-between md:justify-start">
-                          {/* Status Badge */}
-                          <span className={`text-[10px] font-mono tracking-wider uppercase px-2.5 py-1 rounded-md border ${
-                            rev.status === "published"
-                              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                              : "bg-amber-500/10 border-amber-500/30 text-amber-400"
-                          }`}>
-                            {rev.status}
-                          </span>
-
-                          {/* Button Group */}
-                          <div className="flex gap-2">
-                            {rev.status === "pending" ? (
-                              <button
-                                onClick={() => handlePublish(rev.id)}
-                                className="py-1.5 px-3 rounded-lg font-mono text-[9px] uppercase tracking-wider font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition-colors cursor-pointer"
-                              >
-                                Publish
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleUnpublish(rev.id)}
-                                className="py-1.5 px-3 rounded-lg font-mono text-[9px] uppercase tracking-wider font-bold text-zinc-300 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
-                              >
-                                Unpublish
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleDelete(rev.id)}
-                              className="py-1.5 px-3 rounded-lg font-mono text-[9px] uppercase tracking-wider font-bold text-white bg-red-600 hover:bg-red-500 transition-colors cursor-pointer"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
+                  <form onSubmit={handleLogin} className="flex flex-col gap-4">
+                    {loginError && (
+                      <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-[#FF2D55] text-xs text-center font-medium">
+                        {loginError}
                       </div>
-                    );
-                  })
-                )}
-              </div>
+                    )}
+                    <div className="flex flex-col text-left">
+                      <label className="text-zinc-400 text-[10px] font-mono uppercase tracking-wider mb-2">Email Address</label>
+                      <input
+                        type="email"
+                        required
+                        value={adminEmail}
+                        onChange={(e) => setAdminEmail(e.target.value)}
+                        placeholder="admin@cinematicportfolio.com"
+                        className="bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-500 text-xs font-sans focus:outline-none focus:border-[#FF2D55]/50 focus:ring-1 focus:ring-[#FF2D55]/50 transition-all duration-300"
+                      />
+                    </div>
+                    <div className="flex flex-col text-left">
+                      <label className="text-zinc-400 text-[10px] font-mono uppercase tracking-wider mb-2">Password</label>
+                      <input
+                        type="password"
+                        required
+                        value={adminPassword}
+                        onChange={(e) => setAdminPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-500 text-xs font-sans focus:outline-none focus:border-[#FF2D55]/50 focus:ring-1 focus:ring-[#FF2D55]/50 transition-all duration-300"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={loggingIn}
+                      className="py-3 px-8 mt-2 rounded-xl font-mono text-xs uppercase tracking-wider font-bold text-white bg-gradient-to-r from-[#FF2D55] to-[#FF6A3D] cursor-pointer shadow-[0_0_20px_rgba(255,45,85,0.3)] transition-all hover:scale-[1.02]"
+                    >
+                      {loggingIn ? "Logging in..." : "Login"}
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                /* Reviews List */
+                <div className="flex flex-col gap-6 text-left">
+                  {adminReviews.length === 0 ? (
+                    <div className="text-center py-16 border border-dashed border-white/10 rounded-2xl bg-white/[0.02]">
+                      <p className="text-zinc-500 text-sm font-sans">No reviews submitted yet.</p>
+                    </div>
+                  ) : (
+                    adminReviews.map((rev) => {
+                      const formattedDate = new Date(rev.createdAt).toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      });
+
+                      return (
+                        <div
+                          key={rev.id}
+                          className="white-glass p-5 rounded-2xl border border-white/5 flex flex-col md:flex-row gap-5 justify-between items-start md:items-center hover:border-white/10 transition-all"
+                        >
+                          {/* Identity & Content */}
+                          <div className="flex gap-4 items-start flex-1">
+                            {/* Photo */}
+                            <div className="shrink-0">
+                              {rev.photoUrl ? (
+                                <img
+                                  src={rev.photoUrl}
+                                  alt={rev.customerName}
+                                  className="w-14 h-14 rounded-full object-cover border border-white/10"
+                                />
+                              ) : (
+                                <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#FF2D55]/20 to-[#FF6A3D]/20 border border-white/10 flex items-center justify-center text-[#FF2D55] font-display text-base font-bold">
+                                  {rev.customerName.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Text details */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                                <h4 className="font-nunito text-sm text-white font-bold truncate">
+                                  {rev.customerName}
+                                </h4>
+                                {rev.instagram && (
+                                  <span className="text-zinc-500 text-xs font-sans">
+                                    ({rev.instagram.startsWith("@") ? rev.instagram : `@${rev.instagram}`})
+                                  </span>
+                                )}
+                                <span className="text-zinc-600 text-[10px] font-mono">
+                                  • {formattedDate}
+                                </span>
+                              </div>
+
+                              {/* Details: Service, Project, Email, Phone */}
+                              <div className="text-zinc-400 text-xs font-sans mb-2 flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[#FF2D55] font-semibold">{rev.service}</span>
+                                {rev.project && (
+                                  <span className="text-zinc-500">• Project: {rev.project}</span>
+                                )}
+                                {rev.email && (
+                                  <span className="text-zinc-500">• Email: {rev.email}</span>
+                                )}
+                                {rev.phone && (
+                                  <span className="text-zinc-500">• Phone: {rev.phone}</span>
+                                )}
+                              </div>
+
+                              {/* Star Rating */}
+                              <div className="flex gap-0.5 mb-2.5">
+                                {[...Array(rev.rating)].map((_, i) => (
+                                  <Star key={i} className="w-3.5 h-3.5 fill-[#D8B56A] text-[#D8B56A]" />
+                                ))}
+                                {[...Array(5 - rev.rating)].map((_, i) => (
+                                  <Star key={i} className="w-3.5 h-3.5 text-white/10 fill-transparent" />
+                                ))}
+                              </div>
+
+                              {/* Review text */}
+                              <p className="text-zinc-300 text-xs md:text-sm leading-relaxed font-sans italic bg-white/[0.02] p-3 rounded-xl border border-white/5">
+                                &ldquo;{rev.review}&rdquo;
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Status & Actions Column */}
+                          <div className="flex md:flex-col items-end gap-3 shrink-0 w-full md:w-auto border-t md:border-t-0 border-white/5 pt-4 md:pt-0 mt-3 md:mt-0 justify-between md:justify-start">
+                            {/* Status Badge */}
+                            <span className={`text-[10px] font-mono tracking-wider uppercase px-2.5 py-1 rounded-md border ${
+                              rev.status === "Published"
+                                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                                : rev.status === "Rejected"
+                                ? "bg-red-500/10 border-red-500/30 text-red-400"
+                                : "bg-amber-500/10 border-amber-500/30 text-amber-400"
+                            }`}>
+                              {rev.status}
+                            </span>
+
+                            {/* Button Group */}
+                            <div className="flex gap-2">
+                              {rev.status !== "Published" ? (
+                                <button
+                                  onClick={() => handlePublish(rev.id)}
+                                  className="py-1.5 px-3 rounded-lg font-mono text-[9px] uppercase tracking-wider font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition-colors cursor-pointer"
+                                >
+                                  Publish
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleUnpublish(rev.id)}
+                                  className="py-1.5 px-3 rounded-lg font-mono text-[9px] uppercase tracking-wider font-bold text-zinc-300 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                                >
+                                  Unpublish
+                                </button>
+                              )}
+                              {rev.status !== "Rejected" && (
+                                <button
+                                  onClick={() => handleReject(rev.id)}
+                                  className="py-1.5 px-3 rounded-lg font-mono text-[9px] uppercase tracking-wider font-bold text-white bg-amber-600 hover:bg-amber-500 transition-colors cursor-pointer"
+                                >
+                                  Reject
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDelete(rev.id)}
+                                className="py-1.5 px-3 rounded-lg font-mono text-[9px] uppercase tracking-wider font-bold text-white bg-red-600 hover:bg-red-500 transition-colors cursor-pointer"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

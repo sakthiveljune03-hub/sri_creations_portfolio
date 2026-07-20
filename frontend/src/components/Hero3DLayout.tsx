@@ -16,18 +16,7 @@ export default function Hero3DLayout() {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       setScrollY(currentScrollY);
-      
-      const width = window.innerWidth;
-      if (width < 768) {
-        // Mobile only: only visible at the very top (scrollY < 20)
-        setShowButton(currentScrollY < 20);
-      } else if (width >= 1024) {
-        // Desktop only: always visible
-        setShowButton(true);
-      } else {
-        // Tablet: original behavior (hides when leaving Hero section)
-        setShowButton(currentScrollY < window.innerHeight - 100);
-      }
+      setShowButton(currentScrollY === 0);
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -220,7 +209,7 @@ export default function Hero3DLayout() {
           color: #FFFFFF;
           cursor: pointer;
           
-          transition: transform 0.3s ease, box-shadow 0.3s ease, filter 0.3s ease, opacity 0.4s ease-in-out, translate 0.4s ease-in-out;
+          transition: transform 0.3s ease, box-shadow 0.3s ease, filter 0.3s ease, opacity 350ms ease-in-out, translate 350ms ease-in-out;
           will-change: transform, opacity, translate, box-shadow;
         }
         
@@ -266,7 +255,7 @@ export default function Hero3DLayout() {
         
         .book-now-btn-hide {
           opacity: 0;
-          translate: 0 -10px;
+          translate: 0 -18px;
           pointer-events: none;
         }
       `}} />

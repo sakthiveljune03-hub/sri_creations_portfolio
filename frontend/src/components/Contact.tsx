@@ -178,33 +178,7 @@ export default function Contact() {
 
         </div>
 
-        {/* Social channels bottom footer */}
-        <div className="mt-16 pt-8 border-t border-white/5 flex flex-col items-center">
-          <span className="font-mono text-[10px] text-zinc-500 uppercase block mb-4">
-            Follow Sriman&apos;s Creative updates:
-          </span>
-          <div className="flex items-center gap-4">
-            <a href="#" className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-zinc-300 hover:text-white hover:border-[#FF2D55]/50 hover:bg-white/10 flex items-center justify-center transition-all">
-              <Github className="w-4 h-4" />
-            </a>
-            <a 
-              href="https://www.instagram.com/mr_sriman_official_?igsh=MTNvb2s1Mm80ZWRiZQ==" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              aria-label="Instagram"
-              title="Open Instagram Profile"
-              className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-zinc-300 hover:text-white hover:border-[#FF2D55]/50 hover:bg-white/10 flex items-center justify-center transition-all"
-            >
-              <Instagram className="w-4 h-4" />
-            </a>
-            <a href="#" className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-zinc-300 hover:text-white hover:border-[#FF2D55]/50 hover:bg-white/10 flex items-center justify-center transition-all">
-              <Twitter className="w-4 h-4" />
-            </a>
-            <a href="#" className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-zinc-300 hover:text-white hover:border-[#FF2D55]/50 hover:bg-white/10 flex items-center justify-center transition-all">
-              <Linkedin className="w-4 h-4" />
-            </a>
-          </div>
-        </div>
+
 
       </div>
     </section>
