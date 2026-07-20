@@ -13,6 +13,13 @@ export default function CustomCursor() {
   const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
+    // Disable custom cursor script entirely on mobile/touch devices to save CPU and battery
+    const isMobile = typeof window !== 'undefined' && (window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0);
+    if (isMobile) {
+      setHidden(true);
+      return;
+    }
+
     const updateCoordinates = (e: MouseEvent) => {
       // Direct position update
       setTargetPosition({ x: e.clientX, y: e.clientY });
@@ -81,7 +88,8 @@ export default function CustomCursor() {
     };
   }, [targetPosition]);
 
-  if (hidden) return null;
+  const isMobileDevice = typeof window !== 'undefined' && (window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0);
+  if (hidden || isMobileDevice) return null;
 
   return (
     <>

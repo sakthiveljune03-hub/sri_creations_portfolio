@@ -6,23 +6,30 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Header from "./components/Header";
 import Hero3DLayout from "./components/Hero3DLayout";
-import Stats from "./components/Stats";
-import Portfolio from "./components/Portfolio";
-import Services from "./components/Services";
-import About from "./components/About";
-import WhyWorkWithMe from "./components/WhyWorkWithMe";
-import Contact from "./components/Contact";
-import Footer from "./components/Footer";
-import ScrollCanvas from "./components/ScrollCanvas";
 import PwaInstallPrompt from "./components/PwaInstallPrompt";
 import SplashScreen from "./components/SplashScreen";
 import ScrollToTop from "./components/ScrollToTop";
 
-/**
- * ScrollReveal — robust scroll-triggered animation wrapper.
- * Fades/slides children in when they scroll into the viewport.
- * Handles: elements already in viewport on load, HMR reloads, and edge cases.
- */
+// Lazy-loaded heavy components below the fold for massive performance gains
+const About = React.lazy(() => import("./components/About"));
+const Stats = React.lazy(() => import("./components/Stats"));
+const Services = React.lazy(() => import("./components/Services"));
+const Portfolio = React.lazy(() => import("./components/Portfolio"));
+const WhyWorkWithMe = React.lazy(() => import("./components/WhyWorkWithMe"));
+const Contact = React.lazy(() => import("./components/Contact"));
+const Footer = React.lazy(() => import("./components/Footer"));
+const ScrollCanvas = React.lazy(() => import("./components/ScrollCanvas"));
+
+// Premium loading skeleton for smooth transitions
+const ComponentLoader = () => (
+  <div className="w-full min-h-[250px] flex items-center justify-center p-12">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-12 h-12 border-4 border-[#FF2D55] border-t-transparent rounded-full animate-spin"></div>
+      <div className="text-zinc-500 font-mono text-xs uppercase tracking-widest animate-pulse">Loading Cinematic Experience...</div>
+    </div>
+  </div>
+);
+
 function ScrollReveal({
   children,
   className = "",
@@ -41,7 +48,6 @@ function ScrollReveal({
     const el = ref.current;
     if (!el) return false;
     const rect = el.getBoundingClientRect();
-    // Check if ANY part of the element is in or near the viewport
     const inViewport = rect.top < window.innerHeight + 100 && rect.bottom > -100;
     if (inViewport) {
       setIsVisible(true);
@@ -54,7 +60,6 @@ function ScrollReveal({
     const el = ref.current;
     if (!el) return;
 
-    // Immediately check if already in viewport (handles page load + HMR)
     if (checkVisibility()) return;
 
     const observer = new IntersectionObserver(
@@ -69,7 +74,6 @@ function ScrollReveal({
 
     observer.observe(el);
 
-    // Safety fallback — if observer hasn't fired after 2s, re-check position
     const fallbackTimer = setTimeout(() => {
       checkVisibility();
     }, 2000);
@@ -117,8 +121,10 @@ export default function App() {
       }`}
       style={{ background: "transparent" }}
     >
-      {/* Immersive Scroll Animation Background Canvas */}
-      <ScrollCanvas />
+      {/* Immersive Scroll Animation Background Canvas (Lazy Loaded) */}
+      <React.Suspense fallback={null}>
+        <ScrollCanvas />
+      </React.Suspense>
 
       {/* PWA Custom Install Prompts */}
       <PwaInstallPrompt />
@@ -158,41 +164,45 @@ export default function App() {
         {/* Section 1: Hero — renders immediately, no scroll animation */}
         <Hero3DLayout />
 
-        {/* Section 2: About */}
-        <ScrollReveal direction="up" delay={0}>
-          <About />
-        </ScrollReveal>
+        <React.Suspense fallback={<ComponentLoader />}>
+          {/* Section 2: About */}
+          <ScrollReveal direction="up" delay={0}>
+            <About />
+          </ScrollReveal>
 
-        {/* Section 2b: Stats */}
-        <ScrollReveal direction="up" delay={0}>
-          <Stats />
-        </ScrollReveal>
+          {/* Section 2b: Stats */}
+          <ScrollReveal direction="up" delay={0}>
+            <Stats />
+          </ScrollReveal>
 
-        {/* Section 3: Services */}
-        <ScrollReveal direction="up" delay={80}>
-          <Services />
-        </ScrollReveal>
+          {/* Section 3: Services */}
+          <ScrollReveal direction="up" delay={80}>
+            <Services />
+          </ScrollReveal>
 
-        {/* Section 4: Portfolio */}
-        <ScrollReveal direction="up" delay={0}>
-          <Portfolio />
-        </ScrollReveal>
+          {/* Section 4: Portfolio */}
+          <ScrollReveal direction="up" delay={0}>
+            <Portfolio />
+          </ScrollReveal>
 
-        {/* Section 5: Testimonials */}
-        <ScrollReveal direction="up" delay={80}>
-          <WhyWorkWithMe />
-        </ScrollReveal>
+          {/* Section 5: Testimonials */}
+          <ScrollReveal direction="up" delay={80}>
+            <WhyWorkWithMe />
+          </ScrollReveal>
 
-        {/* Section 6: Contact */}
-        <ScrollReveal direction="up" delay={100}>
-          <Contact />
-        </ScrollReveal>
+          {/* Section 6: Contact */}
+          <ScrollReveal direction="up" delay={100}>
+            <Contact />
+          </ScrollReveal>
+        </React.Suspense>
       </main>
 
       {/* Footer */}
-      <ScrollReveal direction="up" delay={0}>
-        <Footer />
-      </ScrollReveal>
+      <React.Suspense fallback={null}>
+        <ScrollReveal direction="up" delay={0}>
+          <Footer />
+        </ScrollReveal>
+      </React.Suspense>
 
       {/* Floating Scroll to Top button */}
       <ScrollToTop />

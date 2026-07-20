@@ -23,35 +23,69 @@ export interface CustomerReview {
   submittedAt: string;
 }
 
+import { TESTIMONIALS } from "../data";
+
+const API_URL = import.meta.env.VITE_API_URL || "https://sri-creations-portfolio-1.onrender.com";
+
+// Map static testimonials to CustomerReview format for default display
+const staticReviews: CustomerReview[] = TESTIMONIALS.map((t, idx) => ({
+  id: `static-${idx}`,
+  name: t.name,
+  service: t.role,
+  projectName: t.company,
+  rating: 5,
+  review: t.content,
+  photoUrl: t.avatar,
+  confirmGenuine: true,
+  confirmPublish: true,
+  status: "published",
+  submittedAt: new Date().toISOString()
+}));
+
 export default function WhyWorkWithMe() {
   const [reviews, setReviews] = useState<CustomerReview[]>([]);
   const [isAdmin, setIsAdmin] = useState(window.location.hash === "#admin");
+  const [loading, setLoading] = useState(true);
 
-  // Load reviews from localStorage
-  const loadReviews = useCallback(() => {
-    const stored = localStorage.getItem("sri_creation_reviews");
-    if (stored) {
-      try {
-        setReviews(JSON.parse(stored));
-      } catch (e) {
-        console.error("Failed to parse reviews", e);
+  // Load reviews from API with localStorage / static fallback
+  const loadReviews = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/reviews`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        const dbReviews = data.data.map((r: any) => ({
+          id: r._id,
+          name: r.clientName,
+          email: r.email,
+          service: r.service,
+          projectName: r.projectName,
+          completionDate: r.completionDate,
+          rating: r.rating,
+          review: r.review,
+          instagram: r.instagram,
+          photoUrl: r.profileImage,
+          confirmGenuine: r.confirmGenuine !== undefined ? r.confirmGenuine : true,
+          confirmPublish: r.confirmPublish !== undefined ? r.confirmPublish : true,
+          status: r.status === "approved" ? ("published" as const) : ("pending" as const),
+          submittedAt: r.createdAt || new Date().toISOString()
+        }));
+        
+        // Merge DB reviews with static ones so the carousel is never empty
+        setReviews([...dbReviews, ...staticReviews]);
+      } else {
+        setReviews(staticReviews);
       }
-    } else {
-      setReviews([]);
+    } catch (e) {
+      console.error("Failed to fetch reviews from API, using static fallback", e);
+      setReviews(staticReviews);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     loadReviews();
-
-    // Listen to localStorage changes in other tabs for realtime updates
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "sri_creation_reviews") {
-        loadReviews();
-      }
-    };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
   }, [loadReviews]);
 
   // Listen to hash change for Admin toggle
@@ -148,11 +182,8 @@ export default function WhyWorkWithMe() {
     }
 
     setErrorMessage("");
-    setSubmitting(true);
-
-    const newReview: CustomerReview = {
-      id: Math.random().toString(36).substring(2, 9),
-      name: name.trim(),
+    const reviewBody = {
+      clientName: name.trim(),
       email: email.trim() || undefined,
       service,
       projectName: projectName.trim() || undefined,
@@ -160,21 +191,34 @@ export default function WhyWorkWithMe() {
       rating,
       review: review.trim(),
       instagram: instagram.trim() || undefined,
-      photoUrl: photoPreview || undefined,
+      profileImage: photoPreview || undefined,
       confirmGenuine,
       confirmPublish,
-      status: "pending",
-      submittedAt: new Date().toISOString(),
+      status: "approved" // Instantly approve for real-time frontend display
     };
 
-    const updatedReviews = [newReview, ...reviews];
-    localStorage.setItem("sri_creation_reviews", JSON.stringify(updatedReviews));
-    setReviews(updatedReviews);
-
-    setTimeout(() => {
-      setSubmitting(false);
-      setSubmitted(true);
-    }, 1200);
+    fetch(`${API_URL}/api/reviews`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(reviewBody)
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setSubmitting(false);
+        if (data.success) {
+          setSubmitted(true);
+          loadReviews(); // Refresh the list from the database immediately
+        } else {
+          setErrorMessage(data.message || "Failed to submit review. Please try again.");
+        }
+      })
+      .catch((err) => {
+        console.error("Error submitting review:", err);
+        setSubmitting(false);
+        setErrorMessage("Network error: Could not connect to the database server.");
+      });
   };
 
   const resetForm = () => {
