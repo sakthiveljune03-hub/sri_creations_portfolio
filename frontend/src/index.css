@@ -111,6 +111,7 @@
 html {
   scrollbar-width: none;
   scroll-behavior: smooth;
+  color-scheme: dark;
 }
 body {
   background: #050505;
