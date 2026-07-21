@@ -306,7 +306,12 @@ export default function WhyWorkWithMe() {
         headers: { "Authorization": `Bearer ${token}` }
       });
       const data = await res.json();
-      if (!data.success) alert(data.message || "Failed to publish");
+      if (!data.success) {
+        alert(data.message || "Failed to publish");
+      } else {
+        loadReviews();
+        loadAdminReviews();
+      }
     } catch (err) {
       alert("Error publishing review");
     }
@@ -319,7 +324,12 @@ export default function WhyWorkWithMe() {
         headers: { "Authorization": `Bearer ${token}` }
       });
       const data = await res.json();
-      if (!data.success) alert(data.message || "Failed to unpublish");
+      if (!data.success) {
+        alert(data.message || "Failed to unpublish");
+      } else {
+        loadReviews();
+        loadAdminReviews();
+      }
     } catch (err) {
       alert("Error unpublishing review");
     }
@@ -332,7 +342,12 @@ export default function WhyWorkWithMe() {
         headers: { "Authorization": `Bearer ${token}` }
       });
       const data = await res.json();
-      if (!data.success) alert(data.message || "Failed to reject");
+      if (!data.success) {
+        alert(data.message || "Failed to reject");
+      } else {
+        loadReviews();
+        loadAdminReviews();
+      }
     } catch (err) {
       alert("Error rejecting review");
     }
@@ -346,7 +361,12 @@ export default function WhyWorkWithMe() {
           headers: { "Authorization": `Bearer ${token}` }
         });
         const data = await res.json();
-        if (!data.success) alert(data.message || "Failed to delete");
+        if (!data.success) {
+          alert(data.message || "Failed to delete");
+        } else {
+          loadReviews();
+          loadAdminReviews();
+        }
       } catch (err) {
         alert("Error deleting review");
       }
