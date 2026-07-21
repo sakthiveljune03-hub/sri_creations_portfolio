@@ -112,10 +112,11 @@ html {
   scrollbar-width: none;
   scroll-behavior: smooth;
   color-scheme: dark;
+  -webkit-overflow-scrolling: touch;
 }
 body {
   background: #050505;
-  background-attachment: fixed;
+  -webkit-overflow-scrolling: touch;
 }
 section {
   scroll-margin-top: 0px;
