@@ -572,11 +572,12 @@ function CinemaPanel({
             ? "0 0 35px rgba(255,45,85,0.6), 0 0 70px rgba(255,45,85,0.2), 0 25px 50px rgba(0,0,0,0.7)"
             : "0 15px 35px rgba(0,0,0,0.5)",
           background: "rgba(10, 5, 20, 0.4)",
-          backdropFilter: "blur(20px)",
+          // Disable blur calculation when card is active or on mobile to avoid repaint lag
+          backdropFilter: isMobile ? "none" : (isActive ? "none" : "blur(20px)"),
           transformStyle: "preserve-3d",
         }}
-        // Idle floating motion + hover scale reaction
-        animate={{
+        // Idle floating motion (disabled on mobile to prevent continuous page reflow/repaint lag)
+        animate={isMobile ? {} : {
           y: isActive ? [0, -8, 0] : [0, -5, 0],
         }}
         transition={{

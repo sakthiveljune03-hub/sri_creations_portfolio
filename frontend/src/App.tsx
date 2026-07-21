@@ -6,7 +6,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Header from "./components/Header";
 import Hero3DLayout from "./components/Hero3DLayout";
-import PwaInstallPrompt from "./components/PwaInstallPrompt";
 import SplashScreen from "./components/SplashScreen";
 import ScrollToTop from "./components/ScrollToTop";
 
@@ -125,9 +124,6 @@ export default function App() {
       <React.Suspense fallback={null}>
         <ScrollCanvas />
       </React.Suspense>
-
-      {/* PWA Custom Install Prompts */}
-      <PwaInstallPrompt />
 
       {/* Cinematic Splash Loading Screen */}
       <SplashScreen />
