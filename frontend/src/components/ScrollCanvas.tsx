@@ -13,11 +13,10 @@ import { useEffect, useRef } from "react";
 export default function ScrollCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  // Detect mobile / touch devices to prevent loading 500+ images and heavy canvas rendering
+  // Detect mobile / touch devices to load fewer frames and optimize performance
   const isMobile = typeof window !== 'undefined' && (window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0);
 
   useEffect(() => {
-    if (isMobile) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -33,6 +32,8 @@ export default function ScrollCanvas() {
     let currentFrame = 0;
     let targetFrame = 0;
     const lerpFactor = 0.08;
+    let isAnimating = false;
+    let animationId: number;
 
     // Helper to resolve paths relative to the public directory
     function getFramePath(index: number) {
@@ -114,9 +115,10 @@ export default function ScrollCanvas() {
       renderFrame(currentIndex);
     }
 
-    // Parallel preloading of all frames
+    // Parallel preloading of all frames (load 6x fewer frames on mobile to save bandwidth/RAM)
     function preloadImages() {
-      for (let i = 0; i < totalFrames; i++) {
+      const frameStep = isMobile ? 6 : 1;
+      for (let i = 0; i < totalFrames; i += frameStep) {
         images[i] = new Image();
         images[i].onload = () => {
           loadedStatus[i] = true;
@@ -132,26 +134,34 @@ export default function ScrollCanvas() {
       }
     }
 
-    function updateScroll() {
-      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-      const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
-      const scrollFraction = maxScroll <= 0 ? 0 : scrollY / maxScroll;
-      targetFrame = scrollFraction * (totalFrames - 1);
-    }
-
-    let animationId: number;
     function animate() {
       const diff = targetFrame - currentFrame;
-      if (Math.abs(diff) < 0.001) {
+      if (Math.abs(diff) < 0.01) {
         currentFrame = targetFrame;
+        isAnimating = false;
       } else {
         currentFrame += diff * lerpFactor;
+        isAnimating = true;
       }
 
       const frameToRender = Math.min(totalFrames - 1, Math.max(0, Math.round(currentFrame)));
       renderFrame(frameToRender);
 
-      animationId = requestAnimationFrame(animate);
+      if (isAnimating) {
+        animationId = requestAnimationFrame(animate);
+      }
+    }
+
+    function updateScroll() {
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+      const scrollFraction = maxScroll <= 0 ? 0 : scrollY / maxScroll;
+      targetFrame = scrollFraction * (totalFrames - 1);
+      
+      if (!isAnimating) {
+        isAnimating = true;
+        animationId = requestAnimationFrame(animate);
+      }
     }
 
     window.addEventListener("resize", resizeCanvas);
@@ -160,7 +170,10 @@ export default function ScrollCanvas() {
     resizeCanvas();
     preloadImages();
     updateScroll();
-    animate();
+    
+    // Trigger initial render/animation run
+    isAnimating = true;
+    animationId = requestAnimationFrame(animate);
 
     return () => {
       window.removeEventListener("resize", resizeCanvas);
@@ -168,8 +181,6 @@ export default function ScrollCanvas() {
       cancelAnimationFrame(animationId);
     };
   }, [isMobile]);
-
-  if (isMobile) return null;
 
   return (
     <canvas
