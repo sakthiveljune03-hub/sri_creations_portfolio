@@ -33,6 +33,9 @@ function StarfieldCanvas() {
   const frameRef = useRef<number>(0);
   const timeRef  = useRef<number>(0);
 
+  const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
+  if (isMobileDevice) return null;
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -178,6 +181,9 @@ function StarfieldCanvas() {
    ENVIRONMENT FX  (fog bands + light rays)
 ───────────────────────────────────────────────────────────── */
 function EnvironmentFX() {
+  const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
+  if (isMobileDevice) return null;
+
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 1 }}>
       {/* Top vignette */}
@@ -238,6 +244,9 @@ function EnvironmentFX() {
    REFLECTIVE FLOOR
 ───────────────────────────────────────────────────────────── */
 function ReflectiveFloor() {
+  const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
+  if (isMobileDevice) return null;
+
   return (
     <div
       className="absolute inset-x-0 bottom-0 pointer-events-none cinema-reflection-shimmer"
