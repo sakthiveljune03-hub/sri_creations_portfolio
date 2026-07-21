@@ -31,7 +31,7 @@ export default function ScrollCanvas() {
 
     let currentFrame = 0;
     let targetFrame = 0;
-    const lerpFactor = 0.08;
+    const lerpFactor = isMobile ? 0.3 : 0.08;
     let isAnimating = false;
     let animationId: number;
 
@@ -115,9 +115,9 @@ export default function ScrollCanvas() {
       renderFrame(currentIndex);
     }
 
-    // Parallel preloading of all frames (load 6x fewer frames on mobile to save bandwidth/RAM)
+    // Parallel preloading of all frames (load 3x fewer frames on mobile to save bandwidth/RAM)
     function preloadImages() {
-      const frameStep = isMobile ? 6 : 1;
+      const frameStep = isMobile ? 3 : 1;
       for (let i = 0; i < totalFrames; i += frameStep) {
         images[i] = new Image();
         images[i].onload = () => {
