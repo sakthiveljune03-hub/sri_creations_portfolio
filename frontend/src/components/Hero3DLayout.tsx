@@ -10,12 +10,16 @@ export default function Hero3DLayout() {
   const [scrollY, setScrollY] = useState(0);
   const [showButton, setShowButton] = useState(true);
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   useEffect(() => {
     setIsLoaded(true);
 
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      setScrollY(currentScrollY);
+      if (!isMobile) {
+        setScrollY(currentScrollY);
+      }
       setShowButton(currentScrollY === 0);
     };
 
@@ -26,7 +30,7 @@ export default function Hero3DLayout() {
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", handleScroll);
     };
-  }, []);
+  }, [isMobile]);
 
   const handleBookNowClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -63,11 +67,11 @@ export default function Hero3DLayout() {
     }
   };
 
-  // Parallax / Scroll transform computations
-  const videoTranslateY = scrollY * 0.5; // Video scrolls at half-speed (parallax)
-  const textTranslateY = -scrollY * 0.18; // Text floats upward slowly
-  const textOpacity = Math.max(0, 1 - scrollY / 600); // Fades out by 600px scroll
-  const textScale = Math.max(0.95, 1 - (scrollY / 1000) * 0.05); // Scales down slightly from 1 to 0.95
+  // Parallax / Scroll transform computations (disabled on mobile to prevent GPU lagging and jank)
+  const videoTranslateY = isMobile ? 0 : scrollY * 0.5;
+  const textTranslateY = isMobile ? 0 : -scrollY * 0.18;
+  const textOpacity = isMobile ? 1 : Math.max(0, 1 - scrollY / 600);
+  const textScale = isMobile ? 1 : Math.max(0.95, 1 - (scrollY / 1000) * 0.05);
 
   return (
     <section

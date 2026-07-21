@@ -12,8 +12,12 @@ import { useEffect, useRef } from "react";
  */
 export default function ScrollCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  // Detect mobile / touch devices to prevent loading 500+ images and heavy canvas rendering
+  const isMobile = typeof window !== 'undefined' && (window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0);
 
   useEffect(() => {
+    if (isMobile) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -163,7 +167,9 @@ export default function ScrollCanvas() {
       window.removeEventListener("scroll", updateScroll);
       cancelAnimationFrame(animationId);
     };
-  }, []);
+  }, [isMobile]);
+
+  if (isMobile) return null;
 
   return (
     <canvas

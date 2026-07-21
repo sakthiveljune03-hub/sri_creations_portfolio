@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 export default function CustomCursor() {
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -12,21 +12,21 @@ export default function CustomCursor() {
   const [clicked, setClicked] = useState(false);
   const [hovered, setHovered] = useState(false);
 
+  const targetPosRef = useRef({ x: 0, y: 0 });
+  const isMobileDevice = typeof window !== 'undefined' && (window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0);
+
   useEffect(() => {
-    // Disable custom cursor script entirely on mobile/touch devices to save CPU and battery
-    const isMobile = typeof window !== 'undefined' && (window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0);
-    if (isMobile) {
-      setHidden(true);
-      return;
-    }
+    if (isMobileDevice) return;
 
     const updateCoordinates = (e: MouseEvent) => {
-      // Direct position update
-      setTargetPosition({ x: e.clientX, y: e.clientY });
+      const x = e.clientX;
+      const y = e.clientY;
+      setTargetPosition({ x, y });
+      targetPosRef.current = { x, y };
       
       // Update CSS variables for mouse-reactive lighting
-      document.documentElement.style.setProperty("--mouse-x", `${e.clientX}px`);
-      document.documentElement.style.setProperty("--mouse-y", `${e.clientY}px`);
+      document.documentElement.style.setProperty("--mouse-x", `${x}px`);
+      document.documentElement.style.setProperty("--mouse-y", `${y}px`);
       document.documentElement.style.setProperty("--mouse-page-x", `${e.pageX}px`);
       document.documentElement.style.setProperty("--mouse-page-y", `${e.pageY}px`);
     };
@@ -49,9 +49,8 @@ export default function CustomCursor() {
     let animationFrameId: number;
     const lerp = () => {
       setPosition((prev) => {
-        const dx = targetPosition.x - prev.x;
-        const dy = targetPosition.y - prev.y;
-        // Adjust speed here (e.g. 0.15 for smooth lag)
+        const dx = targetPosRef.current.x - prev.x;
+        const dy = targetPosRef.current.y - prev.y;
         return {
           x: prev.x + dx * 0.18,
           y: prev.y + dy * 0.18,
@@ -86,9 +85,8 @@ export default function CustomCursor() {
       cancelAnimationFrame(animationFrameId);
       observer.disconnect();
     };
-  }, [targetPosition]);
+  }, [isMobileDevice]);
 
-  const isMobileDevice = typeof window !== 'undefined' && (window.innerWidth < 768 || 'ontouchstart' in window || navigator.maxTouchPoints > 0);
   if (hidden || isMobileDevice) return null;
 
   return (
