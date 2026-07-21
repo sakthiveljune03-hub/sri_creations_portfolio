@@ -42,8 +42,9 @@ function StarfieldCanvas() {
     let W = canvas.width  = canvas.offsetWidth;
     let H = canvas.height = canvas.offsetHeight;
 
-    // Build stars
-    const N_STARS = 280;
+    // Build stars (optimized density on mobile)
+    const isMobile = window.innerWidth < 768;
+    const N_STARS = isMobile ? 60 : 280;
     const stars: Star[] = Array.from({ length: N_STARS }, () => ({
       x: Math.random() * W,
       y: Math.random() * H,
@@ -55,7 +56,7 @@ function StarfieldCanvas() {
     }));
 
     // Build galaxy dust particles (smaller, denser)
-    const N_DUST = 120;
+    const N_DUST = isMobile ? 20 : 120;
     const dust: Star[] = Array.from({ length: N_DUST }, () => ({
       x: Math.random() * W,
       y: Math.random() * H * 0.7,
@@ -624,8 +625,8 @@ function CinemaPanel({
             loading="lazy"
           />
 
-          {/* Autoplay video overlay (active panel) */}
-          {(isActive || isSpecialCard) && (
+          {/* Autoplay video overlay (rendered for active panel ONLY to prevent mobile hardware decoder crash) */}
+          {isActive && (
             <video
               ref={videoRef}
               src={project.videoUrl}
@@ -633,14 +634,14 @@ function CinemaPanel({
               loop={!hasPlayedOnce}
               muted={!isAudioActive}
               playsInline
-              preload="metadata"
+              preload="auto"
               onEnded={handleEnded}
               style={{
                 position: "absolute", inset: 0, width: "100%", height: "100%",
                 objectFit: "cover",
                 borderRadius: "inherit",
-                zIndex: isActive ? 1 : -1,
-                opacity: isActive ? 1 : 0,
+                zIndex: 1,
+                opacity: 1,
                 transition: "opacity 0.5s ease",
                 transform: "translateZ(0)", // GPU acceleration
               }}
